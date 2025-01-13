@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skim - Find the Best Construction Material Prices</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col items-center px-4 py-12">
+        <!-- Header Section -->
+        <div class="text-center max-w-3xl mx-auto mb-12">
+            <div class="flex items-center justify-center gap-3 mb-4">
+                <h1 class="text-5xl font-bold text-gray-900">Skim</h1>
+                <img src="{{ url_for('static', filename='icons/trowel.png') }}" alt="Trowel icon" class="h-16 object-contain">
+            </div>
+            <p class="text-xl text-gray-600 leading-relaxed">
+                Find the best prices for your plastering materials instantly. 
+                Compare prices across local suppliers and provide an accurate quote to your customer.
+            </p>
+        </div>
+
+        <!-- Main Form -->
+        <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+            <form id="calculatorForm" class="space-y-6">
+                <div>
+                    <label for="plasterboards" class="block text-sm font-medium text-gray-700 mb-2">
+                        Number of Plasterboards
+                    </label>
+                    <input type="number" id="plasterboards" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter quantity">
+                </div>
+
+                <div>
+                    <label for="plasterBags" class="block text-sm font-medium text-gray-700 mb-2">
+                        Bags of Plaster
+                    </label>
+                    <input type="number" id="plasterBags" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter quantity">
+                </div>
+
+                <div>
+                    <label for="location" class="block text-sm font-medium text-gray-700 mb-2">
+                        Your Location
+                    </label>
+                    <input type="text" id="location" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter your location">
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
+                    Calculate Best Prices
+                </button>
+            </form>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="w-full max-w-md mt-8 hidden">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-4">Best Prices Found</h2>
+            <div id="resultsList" class="space-y-4"></div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading" class="hidden mt-8">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('calculatorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            const resultsList = document.getElementById('resultsList');
+            
+            // Show loading, hide results
+            loading.classList.remove('hidden');
+            results.classList.add('hidden');
+            resultsList.innerHTML = '';
+
+            try {
+                const response = await fetch('/calculate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        plasterboards: document.getElementById('plasterboards').value,
+                        plasterBags: document.getElementById('plasterBags').value,
+                        location: document.getElementById('location').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Hide loading, show results
+                loading.classList.add('hidden');
+                results.classList.remove('hidden');
+
+                // Display results
+                data.locations.forEach(location => {
+                    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address)}`;
+                    const locationElement = document.createElement('div');
+                    locationElement.className = 'bg-white p-6 rounded-lg shadow-md';
+                    locationElement.innerHTML = `
+                        <h3 class="text-lg font-semibold text-gray-900">${location.name}</h3>
+                        <p class="text-gray-600 mb-2">
+                            <a href="${mapsUrl}" target="_blank" class="text-blue-600 hover:underline">
+                                ${location.address}
+                            </a>
+                        </p>
+                        <p class="text-2xl font-bold text-green-600">£${location.total_price.toFixed(2)}</p>
+                    `;
+                    resultsList.appendChild(locationElement);
+                });
+
+            } catch (error) {
+                loading.classList.add('hidden');
+                alert('Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
